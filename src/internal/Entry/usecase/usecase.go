@@ -1,12 +1,13 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
 	"time"
 	entryRep "timetracker/internal/Entry/repository"
 	tagRep "timetracker/internal/Tag/repository"
 	userRep "timetracker/internal/User/repository"
 	"timetracker/models"
+
+	"github.com/pkg/errors"
 )
 
 type UsecaseI interface {
@@ -39,10 +40,12 @@ func (u *usecase) CreateEntry(e *models.Entry) error {
 		return errors.Wrap(err, "Error in func entry.Usecase.CreateEntry")
 	}
 
-	err = u.tagRepository.CreateEntryTags(e.ID, e.TagList)
+	if e.TagList != nil && len(e.TagList) != 0 {
+		err = u.tagRepository.CreateEntryTags(e.ID, e.TagList)
 
-	if err != nil {
-		return errors.Wrap(err, "Error in func entry.Usecase.CreateEntry")
+		if err != nil {
+			return errors.Wrap(err, "Error in func entry.Usecase.CreateEntry")
+		}
 	}
 
 	return nil
@@ -61,7 +64,13 @@ func (u *usecase) UpdateEntry(e *models.Entry) error {
 		return errors.Wrap(err, "Error in func entry.Usecase.UpdateEntry")
 	}
 
-	err = u.tagRepository.UpdateEntryTags(e.ID, e.TagList)
+	if e.TagList != nil && len(e.TagList) != 0 {
+		err = u.tagRepository.UpdateEntryTags(e.ID, e.TagList)
+
+		if err != nil {
+			return errors.Wrap(err, "Error in func entry.Usecase.UpdateEntry")
+		}
+	}
 
 	if err != nil {
 		return errors.Wrap(err, "Error in func entry.Usecase.UpdateEntry")
@@ -122,7 +131,7 @@ func (u *usecase) DeleteEntry(id uint64, userId uint64) error {
 		return models.ErrNotFound
 	}
 
-	if existedEntry.UserID != userId {
+	if *existedEntry.UserID != userId {
 		return models.ErrPermissionDenied
 	}
 

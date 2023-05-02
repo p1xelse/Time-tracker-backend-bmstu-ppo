@@ -1,0 +1,16 @@
+version: "3.5"
+services:
+  test_postgres:
+    image: "postgres:latest"
+    container_name: test_postgres
+    ports:
+      - "13081:5432"
+    volumes:
+      - ./SQL:/docker-entrypoint-initdb.d/
+      # - ./gen:/home/gen/
+      # - ./config_postgres.conf:/etc/postgresql.conf
+      - ./log:/var/log/
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: test

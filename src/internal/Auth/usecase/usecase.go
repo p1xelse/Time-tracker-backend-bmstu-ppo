@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	"strconv"
+	"time"
 	authRep "timetracker/internal/Auth/repository"
 	userRep "timetracker/internal/User/repository"
 	"timetracker/models"
@@ -61,7 +62,8 @@ func (u usecase) SignIn(user *models.User) (*models.User, *models.Cookie, error)
 	cookie := models.Cookie{
 		UserID:       repUsr.ID,
 		SessionToken: uuid.NewString(),
-		MaxAge:       3600 * 24 * 365}
+		MaxAge:       time.Duration(3600 * 24 * 365),
+	}
 
 	err = u.authRepository.CreateCookie(&cookie)
 	if err != nil {

@@ -70,7 +70,7 @@ func (u *usecase) DeleteProject(id uint64, userID uint64) error {
 		return errors.New("Project not found") //TODO models error
 	}
 
-	if existedProject.UserID != userID {
+	if *existedProject.UserID != userID {
 		return errors.New("Permission denied")
 	}
 

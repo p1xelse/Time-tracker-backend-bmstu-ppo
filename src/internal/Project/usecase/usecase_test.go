@@ -18,7 +18,7 @@ type TestCaseGetProject struct {
 }
 
 type TestCaseDeleteProject struct {
-	ArgData []uint64
+	ArgData []*uint64
 	Error   error
 }
 
@@ -28,7 +28,7 @@ type TestCaseCreateUpdateProject struct {
 }
 
 type TestCaseGetUserProjects struct {
-	ArgData     uint64
+	ArgData     *uint64
 	ExpectedRes []*models.Project
 	Error       error
 }
@@ -136,7 +136,7 @@ func TestUsecaseDeleteProject(t *testing.T) {
 	assert.NoError(t, err)
 
 	invalidMockProject.ID += mockProject.ID + 1
-	invalidMockProject.UserID += mockProject.UserID + 1
+	*invalidMockProject.UserID += *mockProject.UserID + 1
 
 	mockProjectRepo := goalMocks.NewRepositoryI(t)
 
@@ -149,18 +149,18 @@ func TestUsecaseDeleteProject(t *testing.T) {
 
 	cases := map[string]TestCaseDeleteProject{
 		"success": {
-			ArgData: []uint64{mockProject.ID, mockProject.UserID},
+			ArgData: []*uint64{&mockProject.ID, mockProject.UserID},
 			Error:   nil,
 		},
 		"Project not found": {
-			ArgData: []uint64{invalidMockProject.ID, invalidMockProject.UserID},
+			ArgData: []*uint64{&invalidMockProject.ID, invalidMockProject.UserID},
 			Error:   models.ErrNotFound,
 		},
 	}
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := useCase.DeleteProject(test.ArgData[0], test.ArgData[1])
+			err := useCase.DeleteProject(*test.ArgData[0], *test.ArgData[1])
 			require.Equal(t, test.Error, errors.Cause(err))
 		})
 	}
@@ -194,7 +194,7 @@ func TestUsecaseGetUserProjects(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			user, err := useCase.GetUserProjects(test.ArgData)
+			user, err := useCase.GetUserProjects(*test.ArgData)
 			require.Equal(t, test.Error, err)
 
 			if err == nil {

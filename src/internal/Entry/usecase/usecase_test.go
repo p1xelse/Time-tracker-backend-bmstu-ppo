@@ -19,7 +19,7 @@ type TestCaseGetEntry struct {
 }
 
 type TestCaseDeleteEntry struct {
-	ArgData []uint64
+	ArgData []*uint64
 	Error   error
 }
 
@@ -29,7 +29,7 @@ type TestCaseCreateUpdateEntry struct {
 }
 
 type TestCaseGetUserEntries struct {
-	ArgData     uint64
+	ArgData     *uint64
 	ExpectedRes []*models.Entry
 	Error       error
 }
@@ -154,7 +154,7 @@ func TestUsecaseDeleteEntry(t *testing.T) {
 	assert.NoError(t, err)
 
 	invalidMockEntry.ID += mockEntry.ID + 1
-	invalidMockEntry.UserID += mockEntry.UserID + 1
+	*invalidMockEntry.UserID += *mockEntry.UserID + 1
 
 	mockEntryRepo := entryMocks.NewRepositoryI(t)
 	mockTagRepo := tagMocks.NewRepositoryI(t)
@@ -169,18 +169,18 @@ func TestUsecaseDeleteEntry(t *testing.T) {
 
 	cases := map[string]TestCaseDeleteEntry{
 		"success": {
-			ArgData: []uint64{mockEntry.ID, mockEntry.UserID},
+			ArgData: []*uint64{&mockEntry.ID, mockEntry.UserID},
 			Error:   nil,
 		},
 		"Entry not found": {
-			ArgData: []uint64{invalidMockEntry.ID, invalidMockEntry.UserID},
+			ArgData: []*uint64{&invalidMockEntry.ID, invalidMockEntry.UserID},
 			Error:   models.ErrNotFound,
 		},
 	}
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := useCase.DeleteEntry(test.ArgData[0], test.ArgData[1])
+			err := useCase.DeleteEntry(*test.ArgData[0], *test.ArgData[1])
 			require.Equal(t, test.Error, errors.Cause(err))
 		})
 	}
@@ -230,7 +230,7 @@ func TestUsecaseGetUserEntries(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			user, err := useCase.GetUserEntries(test.ArgData)
+			user, err := useCase.GetUserEntries(*test.ArgData)
 			require.Equal(t, test.Error, err)
 
 			if err == nil {

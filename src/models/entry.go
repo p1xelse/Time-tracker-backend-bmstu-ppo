@@ -7,8 +7,8 @@ import (
 
 type Entry struct {
 	ID          uint64    `json:"id"`
-	UserID      uint64    `json:"user_id"`
-	ProjectID   uint64    `json:"project_id"`
+	UserID      *uint64   `json:"user_id"`
+	ProjectID   *uint64   `json:"project_id"`
 	Description string    `json:"description"`
 	TagList     []Tag     `json:"tag_list"`
 	TimeStart   time.Time `json:"time_start"`
