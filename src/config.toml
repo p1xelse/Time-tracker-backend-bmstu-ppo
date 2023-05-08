@@ -1,0 +1,16 @@
+[logger]
+  header = 'time=${time_rfc3339} level=${level} prefix=${prefix} file=${short_file} line=${line} message:'
+  level = 2
+
+[postgres-client]
+    dsn = 'host=localhost user=test password=test database=postgres port=13081'
+    max-open-connections = 10
+    conn-lifetime = '3m0s'
+[server]
+    addr = ':8080'
+    read-timeout = '30s'
+    read-header-timeout = '30s'
+    write-timeout = '30s'
+[redis-client]
+    addr =':6379'
+    password = 'ws_redis_password'

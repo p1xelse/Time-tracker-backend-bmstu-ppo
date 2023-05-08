@@ -136,7 +136,7 @@ func TestUsecaseDeleteGoal(t *testing.T) {
 	assert.NoError(t, err)
 
 	invalidMockGoal.ID += mockGoal.ID + 1
-	invalidMockGoal.UserID += mockGoal.UserID + 1
+	*invalidMockGoal.UserID += *mockGoal.UserID + 1
 
 	mockGoalRepo := goalMocks.NewRepositoryI(t)
 
@@ -149,11 +149,11 @@ func TestUsecaseDeleteGoal(t *testing.T) {
 
 	cases := map[string]TestCaseDeleteGoal{
 		"success": {
-			ArgData: []uint64{mockGoal.ID, mockGoal.UserID},
+			ArgData: []uint64{mockGoal.ID, *mockGoal.UserID},
 			Error:   nil,
 		},
 		"Goal not found": {
-			ArgData: []uint64{invalidMockGoal.ID, invalidMockGoal.UserID},
+			ArgData: []uint64{invalidMockGoal.ID, *invalidMockGoal.UserID},
 			Error:   models.ErrNotFound,
 		},
 	}
@@ -186,7 +186,7 @@ func TestUsecaseGetUserGoals(t *testing.T) {
 
 	cases := map[string]TestCaseGetUserGoals{
 		"success": {
-			ArgData:     mockGoalRes[0].UserID,
+			ArgData:     *mockGoalRes[0].UserID,
 			ExpectedRes: mockExpectedGoal,
 			Error:       nil,
 		},

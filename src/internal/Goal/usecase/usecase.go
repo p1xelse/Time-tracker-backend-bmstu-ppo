@@ -70,7 +70,7 @@ func (u *usecase) DeleteGoal(id uint64, userID uint64) error {
 		return errors.New("Goal not found") //TODO models error
 	}
 
-	if existedGoal.UserID != userID {
+	if *existedGoal.UserID != userID {
 		return errors.New("Permission denied")
 	}
 

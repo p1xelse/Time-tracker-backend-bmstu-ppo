@@ -1,18 +1,20 @@
 package redis
 
 import (
-	"github.com/go-redis/redis"
+	"context"
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 	"timetracker/internal/Auth/repository"
 	"timetracker/models"
 )
 
 type authRepository struct {
-	db *redis.Client
+	db  *redis.Client
+	ctx context.Context
 }
 
 func (ar authRepository) CreateCookie(cookie *models.Cookie) error {
-	err := ar.db.Set(cookie.SessionToken, cookie.UserID, cookie.MaxAge).Err()
+	err := ar.db.Set(ar.ctx, cookie.SessionToken, cookie.UserID, cookie.MaxAge).Err()
 
 	if err != nil {
 		return errors.Wrap(err, "redis error")
@@ -22,7 +24,7 @@ func (ar authRepository) CreateCookie(cookie *models.Cookie) error {
 }
 
 func (ar authRepository) GetUserByCookie(value string) (string, error) {
-	userIdStr, err := ar.db.Get(value).Result()
+	userIdStr, err := ar.db.Get(ar.ctx, value).Result()
 
 	if errors.Is(err, redis.Nil) {
 		return "", models.ErrNotFound
@@ -34,7 +36,7 @@ func (ar authRepository) GetUserByCookie(value string) (string, error) {
 }
 
 func (ar authRepository) DeleteCookie(value string) error {
-	err := ar.db.Del(value).Err()
+	err := ar.db.Del(ar.ctx, value).Err()
 
 	if err != nil {
 		return errors.Wrap(err, "redis error")
@@ -45,6 +47,7 @@ func (ar authRepository) DeleteCookie(value string) error {
 
 func NewAuthRepository(db *redis.Client) repository.RepositoryI {
 	return &authRepository{
-		db: db,
+		db:  db,
+		ctx: context.Background(),
 	}
 }

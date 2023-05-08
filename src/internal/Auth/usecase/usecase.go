@@ -1,14 +1,15 @@
 package usecase
 
 import (
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
 	"strconv"
 	"time"
 	authRep "timetracker/internal/Auth/repository"
 	userRep "timetracker/internal/User/repository"
 	"timetracker/models"
+
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UsecaseI interface {
@@ -62,7 +63,7 @@ func (u usecase) SignIn(user *models.User) (*models.User, *models.Cookie, error)
 	cookie := models.Cookie{
 		UserID:       repUsr.ID,
 		SessionToken: uuid.NewString(),
-		MaxAge:       time.Duration(3600 * 24 * 365),
+		MaxAge:       (3600 * 24 * 365) * time.Second,
 	}
 
 	err = u.authRepository.CreateCookie(&cookie)
@@ -98,7 +99,8 @@ func (u usecase) SignUp(user *models.User) (*models.Cookie, error) {
 	cookie := models.Cookie{
 		UserID:       user.ID,
 		SessionToken: uuid.NewString(),
-		MaxAge:       3600 * 24 * 365}
+		MaxAge:       (3600 * 24 * 365) * time.Second,
+	}
 
 	err = u.authRepository.CreateCookie(&cookie)
 	if err != nil {

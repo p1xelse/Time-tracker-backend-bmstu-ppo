@@ -125,7 +125,7 @@ func (er *entryRepository) GetUserEntries(userID uint64) ([]*models.Entry, error
 func (er *entryRepository) GetUserEntriesForDay(userID uint64, date time.Time) ([]*models.Entry, error) {
 	entries := make([]*Entry, 0, 10)
 
-	todayStart, todayEnd := pkg.GetToday()
+	todayStart, todayEnd := pkg.GetDayInterval(date)
 	tx := er.db.Where(&Entry{UserID: &userID}).Where("time_start BETWEEN ? AND ?", todayStart, todayEnd).Find(&entries)
 
 	if errors.Is(tx.Error, gorm.ErrRecordNotFound) {

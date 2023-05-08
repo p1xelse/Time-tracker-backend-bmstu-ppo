@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"timetracker/internal/User/repository"
@@ -97,6 +98,7 @@ func (ur userRepository) GetUser(id uint64) (*models.User, error) {
 
 func (ur userRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user User
+	fmt.Println("email", email)
 
 	tx := ur.db.Where(&User{Email: email}).Take(&user)
 

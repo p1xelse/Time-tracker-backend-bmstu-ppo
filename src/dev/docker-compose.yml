@@ -14,3 +14,9 @@ services:
       POSTGRES_USER: test
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: test
+
+  redis:
+    image: redis:latest
+    command: --requirepass "ws_redis_password"
+    ports:
+      - "6379:6379"

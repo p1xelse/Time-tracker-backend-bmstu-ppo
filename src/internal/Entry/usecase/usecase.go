@@ -52,10 +52,14 @@ func (u *usecase) CreateEntry(e *models.Entry) error {
 }
 
 func (u *usecase) UpdateEntry(e *models.Entry) error {
-	_, err := u.entryRepository.GetEntry(e.ID)
+	existedEntry, err := u.entryRepository.GetEntry(e.ID)
 
 	if err != nil {
 		return errors.Wrap(err, "Error in func goal.Usecase.Update.UpdateEntry")
+	}
+
+	if *existedEntry.UserID != *e.UserID {
+		return models.ErrPermissionDenied
 	}
 
 	err = u.entryRepository.UpdateEntry(e)

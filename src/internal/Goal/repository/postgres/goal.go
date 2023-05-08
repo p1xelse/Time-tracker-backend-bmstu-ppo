@@ -10,12 +10,13 @@ import (
 
 type Goal struct {
 	ID          uint64    `gorm:"column:id"`
-	UserID      uint64    `gorm:"column:user_id"`
+	UserID      *uint64   `gorm:"column:user_id"`
 	Name        string    `gorm:"column:name"`
-	ProjectID   uint64    `gorm:"column:project_id"`
+	ProjectID   *uint64   `gorm:"column:project_id"`
 	Description string    `gorm:"column:description"`
 	TimeStart   time.Time `gorm:"column:time_start"`
 	TimeEnd     time.Time `gorm:"column:time_end"`
+	HoursCount  float64   `gorm:"column:hours_count"`
 }
 
 func (Goal) TableName() string {
@@ -31,6 +32,7 @@ func toPostgresGoal(g *models.Goal) *Goal {
 		Description: g.Description,
 		TimeStart:   g.TimeStart,
 		TimeEnd:     g.TimeEnd,
+		HoursCount:  g.HoursCount,
 	}
 }
 
@@ -43,6 +45,7 @@ func toModelGoal(g *Goal) *models.Goal {
 		Description: g.Description,
 		TimeStart:   g.TimeStart,
 		TimeEnd:     g.TimeEnd,
+		HoursCount:  g.HoursCount,
 	}
 }
 
@@ -112,8 +115,7 @@ func (gr goalRepository) DeleteGoal(id uint64) error {
 func (gr goalRepository) GetUserGoals(userID uint64) ([]*models.Goal, error) {
 	goals := make([]*Goal, 0, 10)
 
-	tx := gr.db.Where(&Goal{UserID: userID}).Find(&goals)
-
+	tx := gr.db.Where(&Goal{UserID: &userID}).Find(&goals)
 	if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return nil, models.ErrNotFound
 	} else if tx.Error != nil {

@@ -18,9 +18,9 @@ type usecase struct {
 	projectRepository projectRep.RepositoryI
 }
 
-func New(eRep projectRep.RepositoryI) UsecaseI {
+func New(pRep projectRep.RepositoryI) UsecaseI {
 	return &usecase{
-		projectRepository: eRep,
+		projectRepository: pRep,
 	}
 }
 
