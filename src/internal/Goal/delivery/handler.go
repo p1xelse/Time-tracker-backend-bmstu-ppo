@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	goalUsecase "timetracker/internal/Goal/usecase"
+	"timetracker/internal/middleware"
 	"timetracker/models"
 	"timetracker/models/dto"
 	"timetracker/pkg"
@@ -14,6 +15,21 @@ import (
 
 type Delivery struct {
 	GoalUC goalUsecase.UsecaseI
+}
+
+func (del *Delivery) ownerOrAdminValidate(c echo.Context, goal *models.Goal) error {
+	user, ok := c.Get("user").(*models.User)
+
+	if !ok {
+		c.Logger().Error("can't get user from context")
+		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
+	}
+
+	if user.Role == models.Admin.String() || *goal.UserID == user.ID {
+		return nil
+	}
+
+	return models.ErrPermissionDenied
 }
 
 // CreateGoal godoc
@@ -69,7 +85,7 @@ func (delivery *Delivery) CreateGoal(c echo.Context) error {
 
 // GetGoal godoc
 // @Summary      Show a post
-// @Description  Get goal by id
+// @Description  Get goal by id. Acl: admin, owner
 // @Tags     	 goal
 // @Accept	 application/json
 // @Produce  application/json
@@ -93,13 +109,20 @@ func (delivery *Delivery) GetGoal(c echo.Context) error {
 		return handleError(err)
 	}
 
+	err = delivery.ownerOrAdminValidate(c, goal)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return handleError(err)
+	}
+
 	respGoal := dto.GetResponseFromModelGoal(goal)
 	return c.JSON(http.StatusOK, pkg.Response{Body: *respGoal})
 }
 
 // UpdateGoal godoc
 // @Summary      Update a goal
-// @Description  Update a goal
+// @Description  Update a goal. Acl: owner only
 // @Tags     	 goal
 // @Accept	 application/json
 // @Produce  application/json
@@ -148,7 +171,7 @@ func (delivery *Delivery) UpdateGoal(c echo.Context) error {
 }
 
 // DeleteGoal godoc
-// @Summary      Delete a goal
+// @Summary      Delete a goal. Acl: owner only
 // @Description  Delete a goal
 // @Tags     	 goal
 // @Accept	 application/json
@@ -184,20 +207,48 @@ func (delivery *Delivery) DeleteGoal(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// GetUserGoals godoc
-// @Summary      Get user goals
-// @Description  Get user goals or get user goals for a day
+// GetMyGoals godoc
+// @Summary      Get my goals
+// @Description  Get my goals. Acl: admin,
 // @Tags     goal
 // @Produce  application/json
-// @Param        day    query     string  false  "day for events"
 // @Success  200 {object} pkg.Response{body=[]dto.RespGoal} "success get goals"
 // @Failure 405 {object} echo.HTTPError "Method Not Allowed"
 // @Failure 400 {object} echo.HTTPError "bad request"
 // @Failure 500 {object} echo.HTTPError "internal server error"
 // @Failure 401 {object} echo.HTTPError "no cookie"
-// @Router   /goal/usr [get]
-func (delivery *Delivery) GetUserGoals(c echo.Context) error {
+// @Router   /me/goals [get]
+func (delivery *Delivery) GetMyGoals(c echo.Context) error {
+	userId, ok := c.Get("user_id").(uint64)
+	if !ok {
+		c.Logger().Error("can't parse context user_id")
+		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
+	}
 
+	goals, err := delivery.GoalUC.GetUserGoals(userId)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return handleError(err)
+	}
+
+	respEnties := dto.GetResponseFromModelGoals(goals)
+
+	return c.JSON(http.StatusOK, pkg.Response{Body: respEnties})
+}
+
+// GetUserGoals godoc
+// @Summary      Get user goals
+// @Description  Get user goals. Acl: admin, friends
+// @Tags     goal
+// @Produce  application/json
+// @Success  200 {object} pkg.Response{body=[]dto.RespGoal} "success get goals"
+// @Failure 405 {object} echo.HTTPError "Method Not Allowed"
+// @Failure 400 {object} echo.HTTPError "bad request"
+// @Failure 500 {object} echo.HTTPError "internal server error"
+// @Failure 401 {object} echo.HTTPError "no cookie"
+// @Router   /user/{user_id}/goals [get]
+func (delivery *Delivery) GetUserGoals(c echo.Context) error {
 	userId, ok := c.Get("user_id").(uint64)
 	if !ok {
 		c.Logger().Error("can't parse context user_id")
@@ -230,7 +281,7 @@ func handleError(err error) *echo.HTTPError {
 	}
 }
 
-func NewDelivery(e *echo.Echo, eu goalUsecase.UsecaseI) {
+func NewDelivery(e *echo.Echo, eu goalUsecase.UsecaseI, aclM *middleware.AclMiddleware) {
 	handler := &Delivery{
 		GoalUC: eu,
 	}
@@ -239,5 +290,6 @@ func NewDelivery(e *echo.Echo, eu goalUsecase.UsecaseI) {
 	e.POST("/goal/edit", handler.UpdateGoal)
 	e.GET("/goal/:id", handler.GetGoal)
 	e.DELETE("/goal/:id", handler.DeleteGoal)
-	e.GET("/goal/usr", handler.GetUserGoals)
+	e.GET("/me/goals", handler.GetMyGoals)
+	e.GET("/user/:user_id/goals", handler.GetUserGoals, aclM.FriendsOrAdminOnly)
 }

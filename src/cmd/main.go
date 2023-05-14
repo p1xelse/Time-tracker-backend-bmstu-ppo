@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/BurntSushi/toml"
 	"log"
 	"timetracker/cmd/time_tracker"
+
+	"github.com/BurntSushi/toml"
 )
 
 var (
@@ -30,6 +31,7 @@ func main() {
 	err = timeTracker.Run()
 
 	if err != nil {
+		log.Fatal(err)
 		return
 	}
 }

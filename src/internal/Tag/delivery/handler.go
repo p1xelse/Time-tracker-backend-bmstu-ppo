@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	tagUsecase "timetracker/internal/Tag/usecase"
+	"timetracker/internal/middleware"
 	"timetracker/models"
 	"timetracker/models/dto"
 	"timetracker/pkg"
@@ -14,6 +15,21 @@ import (
 
 type Delivery struct {
 	TagUC tagUsecase.UsecaseI
+}
+
+func (del *Delivery) ownerOrAdminValidate(c echo.Context, tag *models.Tag) error {
+	user, ok := c.Get("user").(*models.User)
+
+	if !ok {
+		c.Logger().Error("can't get user from context")
+		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
+	}
+
+	if user.Role == models.Admin.String() || tag.UserID == user.ID {
+		return nil
+	}
+
+	return models.ErrPermissionDenied
 }
 
 // CreateTag godoc
@@ -93,13 +109,20 @@ func (delivery *Delivery) GetTag(c echo.Context) error {
 		return handleError(err)
 	}
 
+	err = delivery.ownerOrAdminValidate(c, tag)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return handleError(err)
+	}
+
 	respTag := dto.GetResponseFromModelTag(tag)
 	return c.JSON(http.StatusOK, pkg.Response{Body: *respTag})
 }
 
 // UpdateTag godoc
 // @Summary      Update an tag
-// @Description  Update an tag
+// @Description  Update an tag. Acl: owner
 // @Tags     	 tag
 // @Accept	 application/json
 // @Produce  application/json
@@ -149,7 +172,7 @@ func (delivery *Delivery) UpdateTag(c echo.Context) error {
 
 // DeleteTag godoc
 // @Summary      Delete an tag
-// @Description  Delete an tag
+// @Description  Delete an tag. Acl: owner
 // @Tags     	 tag
 // @Accept	 application/json
 // @Param id path int  true  "Tag ID"
@@ -184,9 +207,9 @@ func (delivery *Delivery) DeleteTag(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// GetUserTags godoc
-// @Summary      Get user tags
-// @Description  Get user tags
+// GetMyTags godoc
+// @Summary      Get my tags
+// @Description  Get my tags.
 // @Tags     tag
 // @Produce  application/json
 // @Param        day    query     string  false  "day for events"
@@ -195,13 +218,44 @@ func (delivery *Delivery) DeleteTag(c echo.Context) error {
 // @Failure 400 {object} echo.HTTPError "bad request"
 // @Failure 500 {object} echo.HTTPError "internal server error"
 // @Failure 401 {object} echo.HTTPError "no cookie"
-// @Router   /tag/usr [get]
-func (delivery *Delivery) GetUserTags(c echo.Context) error {
-
+// @Router   /me/tags [get]
+func (delivery *Delivery) GetMyTags(c echo.Context) error {
 	userId, ok := c.Get("user_id").(uint64)
 	if !ok {
 		c.Logger().Error("can't parse context user_id")
 		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
+	}
+
+	tags, err := delivery.TagUC.GetUserTags(userId)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return handleError(err)
+	}
+
+	respTags := dto.GetResponseFromModelTags(tags)
+
+	return c.JSON(http.StatusOK, pkg.Response{Body: respTags})
+}
+
+// GetUserTags godoc
+// @Summary      Get user tags
+// @Description  Get user tags.
+// @Tags     tag
+// @Produce  application/json
+// @Param        day    query     string  false  "day for events"
+// @Success  200 {object} pkg.Response{body=[]dto.RespTag} "success get tags"
+// @Failure 405 {object} echo.HTTPError "Method Not Allowed"
+// @Failure 400 {object} echo.HTTPError "bad request"
+// @Failure 500 {object} echo.HTTPError "internal server error"
+// @Failure 401 {object} echo.HTTPError "no cookie"
+// @Router   /user/{user_id}/tags [get]
+func (delivery *Delivery) GetUserTags(c echo.Context) error {
+	userId, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, models.ErrBadRequest.Error())
 	}
 
 	tags, err := delivery.TagUC.GetUserTags(userId)
@@ -230,14 +284,15 @@ func handleError(err error) *echo.HTTPError {
 	}
 }
 
-func NewDelivery(e *echo.Echo, eu tagUsecase.UsecaseI) {
+func NewDelivery(e *echo.Echo, eu tagUsecase.UsecaseI, aclM *middleware.AclMiddleware) {
 	handler := &Delivery{
 		TagUC: eu,
 	}
 
 	e.POST("/tag/create", handler.CreateTag)
-	e.POST("/tag/edit", handler.UpdateTag)
-	e.GET("/tag/:id", handler.GetTag)
-	e.DELETE("/tag/:id", handler.DeleteTag)
-	e.GET("/tag/usr", handler.GetUserTags)
+	e.POST("/tag/edit", handler.UpdateTag)  // acl: owner
+	e.GET("/tag/:id", handler.GetTag)       // acl: owner, admin
+	e.DELETE("/tag/:id", handler.DeleteTag) // acl: owner
+	e.GET("/me/tags", handler.GetMyTags)
+	e.GET("/user/:user_id/tags", handler.GetUserTags, aclM.FriendsOrAdminOnly)
 }

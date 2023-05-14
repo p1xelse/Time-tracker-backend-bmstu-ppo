@@ -23,22 +23,24 @@ func (req *ReqCreateUpdateProject) ToModelProject() *models.Project {
 }
 
 type RespProject struct {
-	ID        uint64  `json:"id"`
-	UserID    *uint64 `json:"user_id"`
-	Name      string  `json:"name"`
-	About     string  `json:"about"`
-	Color     string  `json:"color"`
-	IsPrivate bool    `json:"is_private"`
+	ID              uint64  `json:"id"`
+	UserID          *uint64 `json:"user_id"`
+	Name            string  `json:"name"`
+	About           string  `json:"about"`
+	Color           string  `json:"color"`
+	IsPrivate       bool    `json:"is_private"`
+	TotalCountHours float64 `json:"total_count_hours"`
 }
 
 func GetResponseFromModelProject(project *models.Project) *RespProject {
 	return &RespProject{
-		ID:        project.ID,
-		UserID:    project.UserID,
-		Name:      project.Name,
-		About:     project.About,
-		Color:     project.Color,
-		IsPrivate: project.IsPrivate,
+		ID:              project.ID,
+		UserID:          project.UserID,
+		Name:            project.Name,
+		About:           project.About,
+		Color:           project.Color,
+		IsPrivate:       project.IsPrivate,
+		TotalCountHours: project.TotalCountHours,
 	}
 }
 

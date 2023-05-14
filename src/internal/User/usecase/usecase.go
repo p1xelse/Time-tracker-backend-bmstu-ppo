@@ -1,15 +1,17 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
 	userRep "timetracker/internal/User/repository"
 	"timetracker/models"
+
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UsecaseI interface {
 	UpdateUser(e *models.User) error
 	GetUser(id uint64) (*models.User, error)
+	GetUsers() ([]*models.User, error)
 }
 
 type usecase struct {
@@ -22,7 +24,7 @@ func (u *usecase) UpdateUser(user *models.User) error {
 		return errors.Wrap(err, "user repository error")
 	}
 
-	if user.Password != "" { // TODO может быть лучше когда будет DTO из dto в models конвертить и сразу хешировать, чтобы в бизнеслогике этого не было
+	if user.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 		if err != nil {
 			return errors.Wrap(err, "Error in func user.Usecase.UpdateUser bcrypt")
@@ -44,9 +46,17 @@ func (u *usecase) GetUser(id uint64) (*models.User, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Error in func user.Usecase.GetUser")
 	}
-	user.Password = ""
 
 	return user, nil
+}
+
+func (u *usecase) GetUsers() ([]*models.User, error) {
+	users, err := u.userRepository.GetUsers()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error in func user.Usecase.GetUsers")
+	}
+
+	return users, nil
 }
 
 func New(uRep userRep.RepositoryI) UsecaseI {

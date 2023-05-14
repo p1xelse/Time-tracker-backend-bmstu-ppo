@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	projectUsecase "timetracker/internal/Project/usecase"
+	"timetracker/internal/middleware"
 	"timetracker/models"
 	"timetracker/models/dto"
 	"timetracker/pkg"
@@ -14,6 +15,21 @@ import (
 
 type Delivery struct {
 	ProjectUC projectUsecase.UsecaseI
+}
+
+func (del *Delivery) ownerOrAdminValidate(c echo.Context, project *models.Project) error {
+	user, ok := c.Get("user").(*models.User)
+
+	if !ok {
+		c.Logger().Error("can't get user from context")
+		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
+	}
+
+	if user.Role == models.Admin.String() || *project.UserID == user.ID {
+		return nil
+	}
+
+	return models.ErrPermissionDenied
 }
 
 // CreateProject godoc
@@ -69,7 +85,7 @@ func (delivery *Delivery) CreateProject(c echo.Context) error {
 
 // GetProject godoc
 // @Summary      Show a post
-// @Description  Get project by id
+// @Description  Get project by id. Acl: admin, owner
 // @Tags     	 project
 // @Accept	 application/json
 // @Produce  application/json
@@ -93,13 +109,20 @@ func (delivery *Delivery) GetProject(c echo.Context) error {
 		return handleError(err)
 	}
 
+	err = delivery.ownerOrAdminValidate(c, project)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return handleError(err)
+	}
+
 	respProject := dto.GetResponseFromModelProject(project)
 	return c.JSON(http.StatusOK, pkg.Response{Body: *respProject})
 }
 
 // UpdateProject godoc
 // @Summary      Update an project
-// @Description  Update an project
+// @Description  Update an project. Acl: owner
 // @Tags     	 project
 // @Accept	 application/json
 // @Produce  application/json
@@ -149,7 +172,7 @@ func (delivery *Delivery) UpdateProject(c echo.Context) error {
 
 // DeleteProject godoc
 // @Summary      Delete an project
-// @Description  Delete an project
+// @Description  Delete an project. Acl: owner
 // @Tags     	 project
 // @Accept	 application/json
 // @Param id path int  true  "Project ID"
@@ -184,9 +207,9 @@ func (delivery *Delivery) DeleteProject(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// GetUserProjects godoc
-// @Summary      Get user projects
-// @Description  Get user projects or get user projects for a day
+// GetMyProjects godoc
+// @Summary      Get my projects
+// @Description  Get my projects.
 // @Tags     project
 // @Produce  application/json
 // @Success  200 {object} pkg.Response{body=[]dto.RespProject} "success get projects"
@@ -194,13 +217,44 @@ func (delivery *Delivery) DeleteProject(c echo.Context) error {
 // @Failure 400 {object} echo.HTTPError "bad request"
 // @Failure 500 {object} echo.HTTPError "internal server error"
 // @Failure 401 {object} echo.HTTPError "no cookie"
-// @Router   /project/usr [get]
-func (delivery *Delivery) GetUserProjects(c echo.Context) error {
+// @Router   /me/projects [get]
+func (delivery *Delivery) GetMyProjects(c echo.Context) error {
 
 	userId, ok := c.Get("user_id").(uint64)
 	if !ok {
 		c.Logger().Error("can't parse context user_id")
 		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
+	}
+
+	projects, err := delivery.ProjectUC.GetUserProjects(userId)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return handleError(err)
+	}
+
+	respProjects := dto.GetResponseFromModelProjects(projects)
+
+	return c.JSON(http.StatusOK, pkg.Response{Body: respProjects})
+}
+
+// GetUserProjects godoc
+// @Summary      Get user projects
+// @Description  Get user projects. Acl: admin, friends
+// @Tags     project
+// @Produce  application/json
+// @Success  200 {object} pkg.Response{body=[]dto.RespProject} "success get projects"
+// @Failure 405 {object} echo.HTTPError "Method Not Allowed"
+// @Failure 400 {object} echo.HTTPError "bad request"
+// @Failure 500 {object} echo.HTTPError "internal server error"
+// @Failure 401 {object} echo.HTTPError "no cookie"
+// @Router   /user/{user_id}/projects [get]
+func (delivery *Delivery) GetUserProjects(c echo.Context) error {
+	userId, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
+
+	if err != nil {
+		c.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, models.ErrBadRequest.Error())
 	}
 
 	projects, err := delivery.ProjectUC.GetUserProjects(userId)
@@ -229,14 +283,15 @@ func handleError(err error) *echo.HTTPError {
 	}
 }
 
-func NewDelivery(e *echo.Echo, pu projectUsecase.UsecaseI) {
+func NewDelivery(e *echo.Echo, pu projectUsecase.UsecaseI, aclM *middleware.AclMiddleware) {
 	handler := &Delivery{
 		ProjectUC: pu,
 	}
 
 	e.POST("/project/create", handler.CreateProject)
-	e.POST("/project/edit", handler.UpdateProject)
-	e.GET("/project/:id", handler.GetProject)
-	e.DELETE("/project/:id", handler.DeleteProject)
-	e.GET("/project/usr", handler.GetUserProjects)
+	e.POST("/project/edit", handler.UpdateProject) //acl: owner
+	e.GET("/project/:id", handler.GetProject) //acl: owner, admin
+	e.DELETE("/project/:id", handler.DeleteProject) //acl: owner
+	e.GET("/me/projects", handler.GetMyProjects)
+	e.GET("/user/:user_id/projects", handler.GetUserProjects, aclM.FriendsOrAdminOnly)
 }

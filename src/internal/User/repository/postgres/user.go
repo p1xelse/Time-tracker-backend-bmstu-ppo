@@ -2,10 +2,11 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
 	"timetracker/internal/User/repository"
 	"timetracker/models"
+
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -13,7 +14,7 @@ type User struct {
 	Name     string `gorm:"column:name"`
 	Email    string `gorm:"column:email"`
 	About    string `gorm:"column:about"`
-	AvatarID uint64 `gorm:"column:avatar_id"`
+	Role     string `gorm:"column:role"`
 	Password string `gorm:"column:password"`
 }
 
@@ -27,7 +28,7 @@ func toPostgresUser(u *models.User) *User {
 		Name:     u.Name,
 		Email:    u.Email,
 		About:    u.About,
-		AvatarID: u.AvatarID,
+		Role:     u.Role,
 		Password: u.Password,
 	}
 }
@@ -38,7 +39,7 @@ func toModelUser(u *User) *models.User {
 		Name:     u.Name,
 		Email:    u.Email,
 		About:    u.About,
-		AvatarID: u.AvatarID,
+		Role:     u.Role,
 		Password: u.Password,
 	}
 }
@@ -109,6 +110,28 @@ func (ur userRepository) GetUserByEmail(email string) (*models.User, error) {
 	}
 
 	return toModelUser(&user), nil
+}
+
+func (ur userRepository) GetUsers() ([]*models.User, error) {
+	users := make([]*User, 0, 10)
+	tx := ur.db.Omit("password").Find(&users)
+
+	if tx.Error != nil {
+		return nil, errors.Wrap(tx.Error, "database error (table users)")
+	}
+
+	return toModelUsers(users), nil
+}
+
+func (ur userRepository) GetUsersByIDs(userIDs []uint64) ([]*models.User, error) {
+	users := make([]*User, 0, 10)
+	tx := ur.db.Omit("password").Find(&users, userIDs)
+
+	if tx.Error != nil {
+		return nil, errors.Wrap(tx.Error, "database error (table users)")
+	}
+
+	return toModelUsers(users), nil
 }
 
 func NewUserRepository(db *gorm.DB) repository.RepositoryI {

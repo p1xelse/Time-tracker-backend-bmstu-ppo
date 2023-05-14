@@ -7,4 +7,5 @@ type Project struct {
 	About     string
 	Color     string
 	IsPrivate bool
+	TotalCountHours float64
 }

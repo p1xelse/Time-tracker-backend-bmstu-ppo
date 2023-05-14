@@ -10,11 +10,12 @@ type ReqUserSignIn struct {
 }
 
 type ReqUserSignUp struct {
-	Name     string `json:"name" validate:"required"`
-	Email    string `json:"email" validate:"required"`
-	About    string `json:"about"`
-	AvatarID uint64 `json:"avatar_id"`
-	Password string `json:"password" validate:"required"`
+	Name       string `json:"name" validate:"required"`
+	Email      string `json:"email" validate:"required"`
+	About      string `json:"about"`
+	Role       string `json:"role"`
+	Password   string `json:"password" validate:"required"`
+	AdminToken string `json:"admin_token"`
 }
 
 func (req *ReqUserSignIn) ToModelUser() *models.User {
@@ -25,30 +26,34 @@ func (req *ReqUserSignIn) ToModelUser() *models.User {
 }
 
 func (req *ReqUserSignUp) ToModelUser() *models.User {
+	if req.Role == "" {
+		req.Role = models.DefaultUser.String()
+	}
+	
 	return &models.User{
 		Name:     req.Name,
 		Email:    req.Email,
 		About:    req.About,
-		AvatarID: req.AvatarID,
+		Role:     req.Role,
 		Password: req.Password,
 	}
 }
 
 type RespUser struct {
-	ID       uint64 `json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	About    string `json:"about"`
-	AvatarID uint64 `json:"avatar_id"`
+	ID    uint64 `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	About string `json:"about"`
+	Role  string `json:"role"`
 }
 
 func GetResponseFromModelUser(user *models.User) *RespUser {
 	return &RespUser{
-		ID:       user.ID,
-		Name:     user.Name,
-		Email:    user.Email,
-		About:    user.About,
-		AvatarID: user.AvatarID,
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+		About: user.About,
+		Role:  user.Role,
 	}
 }
 

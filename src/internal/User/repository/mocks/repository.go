@@ -79,6 +79,58 @@ func (_m *RepositoryI) GetUserByEmail(email string) (*models.User, error) {
 	return r0, r1
 }
 
+// GetUsers provides a mock function with given fields:
+func (_m *RepositoryI) GetUsers() ([]*models.User, error) {
+	ret := _m.Called()
+
+	var r0 []*models.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]*models.User, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []*models.User); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUsersByIDs provides a mock function with given fields: userIDs
+func (_m *RepositoryI) GetUsersByIDs(userIDs []uint64) ([]*models.User, error) {
+	ret := _m.Called(userIDs)
+
+	var r0 []*models.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]uint64) ([]*models.User, error)); ok {
+		return rf(userIDs)
+	}
+	if rf, ok := ret.Get(0).(func([]uint64) []*models.User); ok {
+		r0 = rf(userIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]uint64) error); ok {
+		r1 = rf(userIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateUser provides a mock function with given fields: user
 func (_m *RepositoryI) UpdateUser(user *models.User) error {
 	ret := _m.Called(user)

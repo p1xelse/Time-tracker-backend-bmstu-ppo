@@ -9,8 +9,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/labstack/echo/v4"
 	authUsecase "timetracker/internal/Auth/usecase"
+
+	"github.com/labstack/echo/v4"
 )
 
 const sessionName = "session_token"
@@ -44,6 +45,13 @@ func (del *Delivery) SignUp(c echo.Context) error {
 	if ok, err := pkg.IsRequestValid(&reqUser); !ok {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusBadRequest, models.ErrBadRequest.Error())
+	}
+
+	if reqUser.Role == models.Admin.String() {
+		if reqUser.AdminToken != "secret_token" {
+			c.Logger().Error("invalid secret_token")
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid secret_token")
+		}
 	}
 
 	user := reqUser.ToModelUser()
@@ -133,7 +141,7 @@ func (del *Delivery) Logout(c echo.Context) error {
 	err = del.AuthUC.DeleteCookie(cookie.Value)
 	if err != nil {
 		c.Logger().Error(err)
-		handleError(err)
+		return handleError(err)
 	}
 
 	c.SetCookie(&http.Cookie{

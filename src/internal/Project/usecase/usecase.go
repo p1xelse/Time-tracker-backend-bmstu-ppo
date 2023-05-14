@@ -1,9 +1,14 @@
 package usecase
 
 import (
-	"github.com/pkg/errors"
+	"encoding/json"
+	"fmt"
+	"strconv"
 	projectRep "timetracker/internal/Project/repository"
+	"timetracker/internal/cache"
 	"timetracker/models"
+
+	"github.com/pkg/errors"
 )
 
 type UsecaseI interface {
@@ -16,6 +21,7 @@ type UsecaseI interface {
 
 type usecase struct {
 	projectRepository projectRep.RepositoryI
+	redisStorage      *cache.StorageRedis
 }
 
 func New(pRep projectRep.RepositoryI) UsecaseI {
@@ -84,11 +90,32 @@ func (u *usecase) DeleteProject(id uint64, userID uint64) error {
 }
 
 func (u *usecase) GetUserProjects(userID uint64) ([]*models.Project, error) {
-	Projects, err := u.projectRepository.GetUserProjects(userID)
+	strUserID := strconv.FormatUint(userID, 10)
+	dataFromCache, err := u.redisStorage.Get(strUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if dataFromCache != nil {
+		res := make([]*models.Project, 0, 10)
+		err = json.Unmarshal(dataFromCache, &res)
+		if err != nil {
+			return nil, fmt.Errorf("fail to unmarshal similar ids: %w", err)
+		}
+		fmt.Println("from cache")
+		return res, nil
+	}
+
+	projects, err := u.projectRepository.GetUserProjects(userID)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Error in func project.Usecase.GetUserPosts")
 	}
 
-	return Projects, nil
+	err = u.redisStorage.Set(strUserID, projects)
+	if err != nil {
+		return nil, fmt.Errorf("can not set data to redis cache")
+	}
+
+	return projects, nil
 }

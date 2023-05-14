@@ -2,8 +2,6 @@ package time_tracker
 
 import (
 	"fmt"
-	"github.com/labstack/echo/v4"
-	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"timetracker/cmd/time_tracker/flags"
 	_authDelivery "timetracker/internal/Auth/delivery"
 	authRep "timetracker/internal/Auth/repository/redis"
@@ -11,6 +9,9 @@ import (
 	_entryDelivery "timetracker/internal/Entry/delivery"
 	entryRep "timetracker/internal/Entry/repository/postgres"
 	entryUsecase "timetracker/internal/Entry/usecase"
+	_friendDelivery "timetracker/internal/Friends/delivery"
+	friendRep "timetracker/internal/Friends/repository/postgres"
+	friendUsecase "timetracker/internal/Friends/usecase"
 	_goalDelivery "timetracker/internal/Goal/delivery"
 	goalRep "timetracker/internal/Goal/repository/postgres"
 	goalUsecase "timetracker/internal/Goal/usecase"
@@ -20,20 +21,28 @@ import (
 	_tagDelivery "timetracker/internal/Tag/delivery"
 	tagRep "timetracker/internal/Tag/repository/postgres"
 	tagUsecase "timetracker/internal/Tag/usecase"
+	_userDelivery "timetracker/internal/User/delivery"
 	userRep "timetracker/internal/User/repository/postgres"
+	userUsecase "timetracker/internal/User/usecase"
 	"timetracker/internal/middleware"
+
+	"github.com/labstack/echo/v4"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 )
 
 type TimeTracker struct {
 	base
-	PostgresClient flags.PostgresFlags `toml:"postgres-client"`
-	RedisClient    flags.RedisFlags    `toml:"redis-client"`
-	Server         flags.ServerFlags   `toml:"server"`
+	PostgresClient            flags.PostgresFlags `toml:"postgres-client"`
+	RedisSessionClient        flags.RedisFlags    `toml:"redis-client"`
+	RedisProjectStorageClient flags.RedisFlags    `toml:"redis-project-storage-client"`
+	Server                    flags.ServerFlags   `toml:"server"`
 }
 
 func (tt TimeTracker) Run() error {
 	e := echo.New()
 	services, err := tt.Init(e)
+
+	logger := services.Logger
 
 	if err != nil {
 		return fmt.Errorf("can not init services: %w", err)
@@ -42,16 +51,20 @@ func (tt TimeTracker) Run() error {
 	postgresClient, err := tt.PostgresClient.Init()
 
 	if err != nil {
-		return fmt.Errorf("can not connect to Postgres client: %w", err)
+		logger.Error("can not connect to Postgres client: %w", err)
+		return err
+	} else {
+		logger.Info("Success conect to postgres")
 	}
 
-	redisClient, err := tt.RedisClient.Init()
+	redisClient, err := tt.RedisSessionClient.Init()
 
 	if err != nil {
-		return fmt.Errorf("can not connect to Redis client: %w", err)
+		logger.Error("can not connect to Redis client: %w", err)
+		return err
+	} else {
+		logger.Info("Success conect to redis")
 	}
-
-	logger := services.Logger
 
 	entryRepo := entryRep.NewEntryRepository(postgresClient)
 	userRepo := userRep.NewUserRepository(postgresClient)
@@ -59,18 +72,25 @@ func (tt TimeTracker) Run() error {
 	goalRepo := goalRep.NewGoalRepository(postgresClient)
 	projectRepo := projectRep.NewProjectRepository(postgresClient)
 	authRepo := authRep.NewAuthRepository(redisClient)
+	friendRepo := friendRep.NewFriendRepository(postgresClient)
 
 	entryUC := entryUsecase.New(entryRepo, tagRepo, userRepo)
 	goalUC := goalUsecase.New(goalRepo)
 	projectUC := projectUsecase.New(projectRepo)
 	tagUC := tagUsecase.New(tagRepo)
 	authUC := authUsecase.New(userRepo, authRepo)
+	userUC := userUsecase.New(userRepo)
+	friendUC := friendUsecase.New(friendRepo, userRepo)
 
-	_entryDelivery.NewDelivery(e, entryUC)
-	_goalDelivery.NewDelivery(e, goalUC)
-	_projectDelivery.NewDelivery(e, projectUC)
-	_tagDelivery.NewDelivery(e, tagUC)
+	aclMiddleware := middleware.NewAclMiddleware(friendUC)
+
+	_entryDelivery.NewDelivery(e, entryUC, aclMiddleware)
+	_goalDelivery.NewDelivery(e, goalUC, aclMiddleware)
+	_projectDelivery.NewDelivery(e, projectUC, aclMiddleware)
+	_tagDelivery.NewDelivery(e, tagUC, aclMiddleware)
 	_authDelivery.NewDelivery(e, authUC)
+	_userDelivery.NewDelivery(e, userUC, aclMiddleware)
+	_friendDelivery.NewDelivery(e, friendUC, aclMiddleware)
 
 	e.Use(echoMiddleware.LoggerWithConfig(echoMiddleware.LoggerConfig{
 		Format: `time=${time_custom} remote_ip=${remote_ip} ` +
@@ -85,7 +105,6 @@ func (tt TimeTracker) Run() error {
 
 	httpServer := tt.Server.Init(e)
 	server := Server{*httpServer}
-
 	if err := server.Start(); err != nil {
 		logger.Fatal(err)
 	}

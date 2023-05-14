@@ -10,15 +10,15 @@ import (
 
 const session_name = "session_token"
 
-type middleware struct {
+type Middleware struct {
 	authUC authUsecase.UsecaseI
 }
 
-func NewMiddleware(authUC authUsecase.UsecaseI) *middleware {
-	return &middleware{authUC: authUC}
+func NewMiddleware(authUC authUsecase.UsecaseI) *Middleware {
+	return &Middleware{authUC: authUC}
 }
 
-func (m *middleware) Auth(next echo.HandlerFunc) echo.HandlerFunc {
+func (m *Middleware) Auth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().URL.Path == "/signup" || c.Request().URL.Path == "/signin" ||
 			c.Request().URL.Path == "/auth" || c.Request().URL.Path == "/prometheus" ||
@@ -43,6 +43,7 @@ func (m *middleware) Auth(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		c.Set("user_id", user.ID)
+		c.Set("user", user)
 
 		return next(c)
 	}

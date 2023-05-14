@@ -6,17 +6,35 @@ services:
     ports:
       - "13081:5432"
     volumes:
-      - ./SQL:/docker-entrypoint-initdb.d/
+      - ./dev/SQL:/docker-entrypoint-initdb.d/
       # - ./gen:/home/gen/
       # - ./config_postgres.conf:/etc/postgresql.conf
-      - ./log:/var/log/
+      - ./dev/log:/var/log/
     environment:
       POSTGRES_USER: test
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: test
+    networks:
+      - mynetwork
 
   redis:
     image: redis:latest
     command: --requirepass "ws_redis_password"
     ports:
       - "6379:6379"
+    networks:
+      - mynetwork
+  # app:
+  #   build: .
+  #   container_name: app
+  #   restart: always
+  #   depends_on: 
+  #     - test_postgres
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - mynetwork
+
+
+networks:
+  mynetwork:

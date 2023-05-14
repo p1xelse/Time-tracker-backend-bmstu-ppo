@@ -9,12 +9,13 @@ import (
 )
 
 type Project struct {
-	ID        uint64  `gorm:"column:id"`
-	UserID    *uint64 `gorm:"column:user_id"`
-	Name      string  `gorm:"column:name"`
-	About     string  `gorm:"column:about"`
-	Color     string  `gorm:"column:color"`
-	IsPrivate bool    `gorm:"column:is_private"`
+	ID              uint64  `gorm:"column:id"`
+	UserID          *uint64 `gorm:"column:user_id"`
+	Name            string  `gorm:"column:name"`
+	About           string  `gorm:"column:about"`
+	Color           string  `gorm:"column:color"`
+	IsPrivate       bool    `gorm:"column:is_private"`
+	TotalCountHours float64 `gorm:"column:total_count_hours"`
 }
 
 func (Project) TableName() string {
@@ -23,23 +24,25 @@ func (Project) TableName() string {
 
 func toPostgresProject(p *models.Project) *Project {
 	return &Project{
-		ID:        p.ID,
-		UserID:    p.UserID,
-		Name:      p.Name,
-		About:     p.About,
-		Color:     p.Color,
-		IsPrivate: p.IsPrivate,
+		ID:              p.ID,
+		UserID:          p.UserID,
+		Name:            p.Name,
+		About:           p.About,
+		Color:           p.Color,
+		IsPrivate:       p.IsPrivate,
+		TotalCountHours: p.TotalCountHours,
 	}
 }
 
 func toModelProject(p *Project) *models.Project {
 	return &models.Project{
-		ID:        p.ID,
-		UserID:    p.UserID,
-		Name:      p.Name,
-		About:     p.About,
-		Color:     p.Color,
-		IsPrivate: p.IsPrivate,
+		ID:              p.ID,
+		UserID:          p.UserID,
+		Name:            p.Name,
+		About:           p.About,
+		Color:           p.Color,
+		IsPrivate:       p.IsPrivate,
+		TotalCountHours: p.TotalCountHours,
 	}
 }
 
