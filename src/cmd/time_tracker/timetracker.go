@@ -50,6 +50,7 @@ func (tt TimeTracker) Run() error {
 
 	postgresClient, err := tt.PostgresClient.Init()
 
+
 	if err != nil {
 		logger.Error("can not connect to Postgres client: %w", err)
 		return err
@@ -93,12 +94,10 @@ func (tt TimeTracker) Run() error {
 	_friendDelivery.NewDelivery(e, friendUC, aclMiddleware)
 
 	e.Use(echoMiddleware.LoggerWithConfig(echoMiddleware.LoggerConfig{
-		Format: `time=${time_custom} remote_ip=${remote_ip} ` +
-			`host=${host} method=${method} uri=${uri} user_agent=${user_agent} ` +
-			`status=${status} error="${error}" ` +
-			`bytes_in=${bytes_in} bytes_out=${bytes_out}` + "\n",
-		CustomTimeFormat: "2006-01-02 15:04:05",
+		Format: tt.Logger.LogHttpFormat,
+		Output: logger.Output(),
 	}))
+
 	e.Use(echoMiddleware.Recover())
 	authMiddleware := middleware.NewMiddleware(authUC)
 	e.Use(authMiddleware.Auth)
