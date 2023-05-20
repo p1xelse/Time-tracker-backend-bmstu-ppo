@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"timetracker/cmd/time_tracker/flags"
 	_authDelivery "timetracker/internal/Auth/delivery"
+	authRepPostgres "timetracker/internal/Auth/repository/postgres"
 	authRep "timetracker/internal/Auth/repository/redis"
 	authUsecase "timetracker/internal/Auth/usecase"
 	_entryDelivery "timetracker/internal/Entry/delivery"
@@ -39,7 +40,7 @@ type TimeTracker struct {
 	Server                    flags.ServerFlags   `toml:"server"`
 }
 
-func (tt TimeTracker) Run() error {
+func (tt TimeTracker) Run(sessionDB string) error {
 	e := echo.New()
 	services, err := tt.Init(e)
 
@@ -82,6 +83,7 @@ func (tt TimeTracker) Run() error {
 	goalRepo := goalRep.NewGoalRepository(postgresClient)
 	projectRepo := projectRep.NewProjectRepository(postgresClient)
 	authRepo := authRep.NewAuthRepository(redisSessionClient)
+	authPostgresRepo := authRepPostgres.NewAuthRepositoryPostgres(postgresClient)
 	friendRepo := friendRep.NewFriendRepository(postgresClient)
 	cacheStorage := cache.NewStorageRedis(redisCacheClient)
 
@@ -89,7 +91,12 @@ func (tt TimeTracker) Run() error {
 	goalUC := goalUsecase.New(goalRepo)
 	projectUC := projectUsecase.New(projectRepo, cacheStorage)
 	tagUC := tagUsecase.New(tagRepo)
+
 	authUC := authUsecase.New(userRepo, authRepo)
+	if sessionDB == "postgres" {
+		authUC = authUsecase.New(userRepo, authPostgresRepo)
+	}
+
 	userUC := userUsecase.New(userRepo)
 	friendUC := friendUsecase.New(friendRepo, userRepo)
 

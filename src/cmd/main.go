@@ -10,12 +10,12 @@ import (
 
 var (
 	configPath string
-	sqlDB      string
+	sessionDB      string
 )
 
 func init() {
 	flag.StringVar(&configPath, "config-path", "./config.toml", "path to config file")
-	flag.StringVar(&sqlDB, "sql-db", "postgres", "what sql-db the application uses")
+	flag.StringVar(&sessionDB, "sesseion-db", "redis", "what db the application uses for session")
 }
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = timeTracker.Run()
+	err = timeTracker.Run(sessionDB)
 
 	if err != nil {
 		log.Fatal(err)
