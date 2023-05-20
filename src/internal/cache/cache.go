@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"timetracker/models"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -12,6 +13,11 @@ import (
 const (
 	ttl = time.Duration(time.Hour)
 )
+
+type CacheStorageI interface {
+	Set(key string, data interface{}) error
+	Get(key string) ([]byte, error)
+}
 
 type StorageRedis struct {
 	db *redis.Client
@@ -24,6 +30,7 @@ func NewStorageRedis(m *redis.Client) *StorageRedis {
 	storage := StorageRedis{
 		db:  m,
 		ttl: ttl,
+		ctx: context.Background(),
 	}
 
 	return &storage
@@ -44,8 +51,10 @@ func (sr *StorageRedis) Set(key string, data interface{}) error {
 
 func (sr *StorageRedis) Get(key string) ([]byte, error) {
 	resp, err := sr.db.Get(sr.ctx, key).Bytes()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get data from cache: %w", err)
+	if err != nil && err == redis.Nil{
+		return nil, models.ErrNotFound
+	} else if err != nil {
+		return nil, err
 	}
 
 	return resp, nil

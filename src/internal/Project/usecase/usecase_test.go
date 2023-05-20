@@ -44,7 +44,7 @@ func TestUsecaseGetProject(t *testing.T) {
 
 	mockProjectRepo.On("GetProject", mockProjectRes.ID).Return(&mockProjectRes, nil)
 
-	useCase := usecase.New(mockProjectRepo)
+	useCase := usecase.New(mockProjectRepo, nil)
 
 	cases := map[string]TestCaseGetProject{
 		"success": {
@@ -81,7 +81,7 @@ func TestUsecaseUpdateProject(t *testing.T) {
 
 	mockProjectRepo.On("GetProject", invalidMockProject.ID).Return(nil, models.ErrNotFound)
 
-	useCase := usecase.New(mockProjectRepo)
+	useCase := usecase.New(mockProjectRepo, nil)
 
 	cases := map[string]TestCaseCreateUpdateProject{
 		"success": {
@@ -112,7 +112,7 @@ func TestUsecaseCreateProject(t *testing.T) {
 
 	mockProjectRepo.On("CreateProject", &mockProject).Return(nil)
 
-	useCase := usecase.New(mockProjectRepo)
+	useCase := usecase.New(mockProjectRepo, nil)
 
 	cases := map[string]TestCaseCreateUpdateProject{
 		"success": {
@@ -145,7 +145,7 @@ func TestUsecaseDeleteProject(t *testing.T) {
 
 	mockProjectRepo.On("GetProject", invalidMockProject.ID).Return(nil, models.ErrNotFound)
 
-	useCase := usecase.New(mockProjectRepo)
+	useCase := usecase.New(mockProjectRepo, nil)
 
 	cases := map[string]TestCaseDeleteProject{
 		"success": {
@@ -182,7 +182,7 @@ func TestUsecaseGetUserProjects(t *testing.T) {
 
 	mockProjectRepo.On("GetUserProjects", mockProjectRes[0].UserID).Return(mockProjectRes, nil)
 
-	useCase := usecase.New(mockProjectRepo)
+	useCase := usecase.New(mockProjectRepo, nil)
 
 	cases := map[string]TestCaseGetUserProjects{
 		"success": {

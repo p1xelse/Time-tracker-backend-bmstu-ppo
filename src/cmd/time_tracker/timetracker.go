@@ -24,6 +24,7 @@ import (
 	_userDelivery "timetracker/internal/User/delivery"
 	userRep "timetracker/internal/User/repository/postgres"
 	userUsecase "timetracker/internal/User/usecase"
+	"timetracker/internal/cache"
 	"timetracker/internal/middleware"
 
 	"github.com/labstack/echo/v4"
@@ -50,7 +51,6 @@ func (tt TimeTracker) Run() error {
 
 	postgresClient, err := tt.PostgresClient.Init()
 
-
 	if err != nil {
 		logger.Error("can not connect to Postgres client: %w", err)
 		return err
@@ -58,10 +58,19 @@ func (tt TimeTracker) Run() error {
 		logger.Info("Success conect to postgres")
 	}
 
-	redisClient, err := tt.RedisSessionClient.Init()
+	redisSessionClient, err := tt.RedisSessionClient.Init()
 
 	if err != nil {
-		logger.Error("can not connect to Redis client: %w", err)
+		logger.Error("can not connect to Redis session client: %w", err)
+		return err
+	} else {
+		logger.Info("Success conect to redis")
+	}
+
+	redisCacheClient, err := tt.RedisProjectStorageClient.Init()
+
+	if err != nil {
+		logger.Error("can not connect to Redis cache client: %w", err)
 		return err
 	} else {
 		logger.Info("Success conect to redis")
@@ -72,12 +81,13 @@ func (tt TimeTracker) Run() error {
 	tagRepo := tagRep.NewTagRepository(postgresClient)
 	goalRepo := goalRep.NewGoalRepository(postgresClient)
 	projectRepo := projectRep.NewProjectRepository(postgresClient)
-	authRepo := authRep.NewAuthRepository(redisClient)
+	authRepo := authRep.NewAuthRepository(redisSessionClient)
 	friendRepo := friendRep.NewFriendRepository(postgresClient)
+	cacheStorage := cache.NewStorageRedis(redisCacheClient)
 
 	entryUC := entryUsecase.New(entryRepo, tagRepo, userRepo)
 	goalUC := goalUsecase.New(goalRepo)
-	projectUC := projectUsecase.New(projectRepo)
+	projectUC := projectUsecase.New(projectRepo, cacheStorage)
 	tagUC := tagUsecase.New(tagRepo)
 	authUC := authUsecase.New(userRepo, authRepo)
 	userUC := userUsecase.New(userRepo)

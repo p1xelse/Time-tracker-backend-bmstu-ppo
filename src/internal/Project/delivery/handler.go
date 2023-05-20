@@ -226,7 +226,8 @@ func (delivery *Delivery) GetMyProjects(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, models.ErrInternalServerError.Error())
 	}
 
-	projects, err := delivery.ProjectUC.GetUserProjects(userId)
+	// projects, err := delivery.ProjectUC.GetUserProjects(userId)
+	projects, err := delivery.ProjectUC.GetUserProjectsWithCache(userId)
 
 	if err != nil {
 		c.Logger().Error(err)
